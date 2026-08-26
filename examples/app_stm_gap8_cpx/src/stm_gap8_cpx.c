@@ -33,7 +33,9 @@
 #include "app.h"
 
 #include "commander.h"
+#include "crtp_commander_high_level.h"
 #include "supervisor.h"
+
 #include "log.h"
 #include "param.h"
 #include "cpx.h"
@@ -58,7 +60,21 @@ void appMain() {
   cpxRegisterAppMessageHandler(cpxPacketCallback);
   
   vTaskDelay(M2T(3000));
+
+  // Init high-level commander
+  crtpCommanderHighLevelInit();
+  vTaskDelay(M2T(1000));
+  // Arm
   supervisorRequestArming(true);
+  vTaskDelay(M2T(1000));
+  // Takeoff
+  crtpCommanderHighLevelTakeoff(0.5, 1);
+  vTaskDelay(M2T(3000));
+  // Goto 1,1,1
+  crtpCommanderHighLevelGoTo(1, 1, 1, 0, 2, false);
+  vTaskDelay(M2T(3000));
+  // Land
+  crtpCommanderHighLevelLand(0, 1);
 
   uint8_t counter = 0;
   while(1) {
