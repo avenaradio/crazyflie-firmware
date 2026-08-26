@@ -1,0 +1,5 @@
+{
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/examples/app_stm_gap8_cpx"
+  ]
+}
