@@ -32,6 +32,10 @@
 
 #include "app.h"
 
+#include "commander.h"
+#include "supervisor.h"
+#include "log.h"
+#include "param.h"
 #include "cpx.h"
 #include "cpx_internal_router.h"
 
@@ -52,6 +56,9 @@ void appMain() {
   // Register a callback for CPX packets.
   // Packets sent to destination=CPX_T_STM32 and function=CPX_F_APP will arrive here
   cpxRegisterAppMessageHandler(cpxPacketCallback);
+  
+  vTaskDelay(M2T(3000));
+  supervisorRequestArming(true);
 
   uint8_t counter = 0;
   while(1) {
