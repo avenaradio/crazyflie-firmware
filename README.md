@@ -1,9 +1,23 @@
+
+###### Build
+```sh
+cd examples/app_stm_gap8_cpx
+make clean
+make -j$(nproc)
+```
+###### Flash
+Needs activ python enviroment with cflib installed (`pip install cflib`)
+```sh
+cfloader flash build/cf21bl.bin stm32-fw -w radio://0/80/2M/E7E7E7E7E7
+```
+
+
 # Crazyflie Firmware  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
 
 This project contains the source code for the firmware used in the Crazyflie range of platforms, including the Crazyflie 2.x and the Roadrunner.
 
 ### Crazyflie 1.0 support
-
+ 
 The 2017.06 release was the last release with Crazyflie 1.0 support. If you want
 to play with the Crazyflie 1.0 and modify the code, please clone this repo and
 branch off from the 2017.06 tag.
