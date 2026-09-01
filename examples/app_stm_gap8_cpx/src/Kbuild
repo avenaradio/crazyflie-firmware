@@ -1,1 +1,1 @@
-obj-y += stm_gap8_cpx.o cpx.o parameters.o control.o
+obj-y += stm_gap8_cpx.o app_cpx.o parameters.o control.o

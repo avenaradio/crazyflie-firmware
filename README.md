@@ -2,7 +2,7 @@
 ###### Build
 ```sh
 cd examples/app_stm_gap8_cpx
-make clean
+# make clean
 make -j$(nproc)
 ```
 ###### Flash
