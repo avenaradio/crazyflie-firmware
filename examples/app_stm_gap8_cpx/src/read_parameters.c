@@ -9,23 +9,21 @@
 #include "portmacro.h"
 
 #include "app_cpx.h"
+#include "control.h"
+#include "aideck_global_parameters.h"
 
 #define DEBUG_MODULE "APP_PARAMETERS_C"
 #include "debug.h"
 
 #define SAMPLES_FOR_AVERAGE 10
 #define SAMPLE_TIME 10 // ms
-#define MAX_SPEED 0.5f // m/s
 
 // Parameters
 logVarId_t idX;
 logVarId_t idY;
 logVarId_t idZ;
 logVarId_t idBatteryP;
-float x = 0.0f;
-float y = 0.0f;
-float z = 0.0f;
-float batteryP = 0.0f;
+Parameters_t parameters = {0};
 
 // Arrays for average
 float xa[SAMPLES_FOR_AVERAGE] = {0.0f};
@@ -56,9 +54,12 @@ void getParameters(void){
     static int counter = 0;
     if(counter >= SAMPLES_FOR_AVERAGE){
         counter = 0;
-        batteryP = logGetFloat(idBatteryP);
+        parameters.batteryP = logGetFloat(idBatteryP);
         calculateAverages();
-        //sendValuesToEsp();
+        BaseType_t result = parameters_set(&parameters);
+            if (result != pdPASS) {
+                DEBUG_PRINT("Failed to set parameters_set\n");
+            }
     }
     xa[counter] = logGetFloat(idX);
     ya[counter] = logGetFloat(idY);
@@ -71,14 +72,14 @@ void calculateAverages(void){
     replaceOutliers(xa, max_deviation);
     replaceOutliers(ya, max_deviation);
     replaceOutliers(za, max_deviation);
-    x = average_samples(xa);
-    y = average_samples(ya);
-    z = average_samples(za);
+    parameters.x = average_samples(xa);
+    parameters.y = average_samples(ya);
+    parameters.z = average_samples(za);
     // DEBUG_PRINT("\nX: %f m\nY: %f m\nZ: %f m\nBattery Level: %f %%\n",
-    //         (double)x,
-    //         (double)y,
-    //         (double)z,
-    //         (double)batteryP);
+    //         (double)parameters.x,
+    //         (double)parameters.y,
+    //         (double)parameters.z,
+    //         (double)parameters.batteryP);
 }
 
 //------------------------------------- MATH FUNCTIONS ----------------------------------------//

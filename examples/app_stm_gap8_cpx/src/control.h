@@ -4,18 +4,10 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
+#define MAX_SPEED 0.5f // m/s
+
 void taskAppControl(void *argument);
 void goToFixedCoordinates(float x, float y, float z, float duration_s);
 void land(float absoluteHeight_m, float duration_s);
-
-typedef struct {
-    float x;
-    float y;
-    float z;
-    float duration;
-} GotoCoordinates_t;
-
-extern QueueHandle_t gotoQueue;
-
 
 #endif

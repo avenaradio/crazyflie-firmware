@@ -35,9 +35,10 @@
 #include "app.h"
 
 #include "app_cpx.h"
-
-#include "parameters.h"
+#include "aideck_global_parameters.h"
+#include "read_parameters.h"
 #include "control.h"
+
 
 #define DEBUG_MODULE "APP"
 #include "debug.h"
@@ -45,6 +46,7 @@
 void appMain() {
     DEBUG_PRINT("Hello! I am the stm_esp_cpx app\n");
     DEBUG_PRINT("int: %d, float: %d, uint8_t: %d\n", sizeof(int), sizeof(float), sizeof(uint8_t));
+    aideck_parameters_init();
     vTaskDelay(M2T(3000));
     initAppCpx();
     xTaskCreate(taskAppParameters, "taskAppParameters", configMINIMAL_STACK_SIZE, NULL, 1, NULL);

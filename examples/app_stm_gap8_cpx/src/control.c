@@ -10,26 +10,24 @@
 
 #define DEBUG_MODULE "APP_CONTROL_C"
 #include "debug.h"
-
-QueueHandle_t gotoQueue;
+#include "aideck_global_parameters.h"
 
 //Prototypes
 void goToFixedCoordinates(float x, float y, float z, float duration_s);
 void land(float absoluteHeight_m, float duration_s);
 
 void taskAppControl(void *argument){
-    // Init queue
-    gotoQueue = xQueueCreate(5, sizeof(GotoCoordinates_t));
-    GotoCoordinates_t coordinates;
+    GoToFixPosition_t coordinates;
     // Init high-level commander
     crtpCommanderHighLevelInit();
     vTaskDelay(M2T(1000));
     while(1){
         vTaskDelay(M2T(50));
-        if (xQueueReceive(gotoQueue, &coordinates, portMAX_DELAY) == pdPASS) {
-            DEBUG_PRINT("Moving to x=%f, y=%f, z=%f, speed=%f\n", (double)coordinates.x, (double)coordinates.y, (double)coordinates.z, (double)coordinates.duration);
+        if (goto_fix_position_get(&coordinates) == pdPASS) {
+            DEBUG_PRINT("Moving to x=%f, y=%f, z=%f\n", (double)coordinates.x, (double)coordinates.y, (double)coordinates.z);
 
             // Perform the movement here.
+            // TODO calc distance to get duration from MAX_SPEED
             // goToFixedCoordinates(coordinates.x, coordinates.y, coordinates.z, coordinates.duration);
         }
     }

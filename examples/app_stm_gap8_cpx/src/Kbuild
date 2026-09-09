@@ -1,1 +1,1 @@
-obj-y += stm_gap8_cpx.o app_cpx.o parameters.o control.o
+obj-y += stm_gap8_cpx.o app_cpx.o read_parameters.o control.o aideck_global_parameters.o
