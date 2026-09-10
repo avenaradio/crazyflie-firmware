@@ -64,7 +64,7 @@ void sendParametersToEsp(Parameters_t parameters){
 //------------------------------------------------- receive ----------------------------------------------------//
 
 static void cpxPacketCallback(const CPXPacket_t* cpxRx) {
-  DEBUG_PRINT("Got packet from %d for %d, if=%d: (%s)\n", cpxRx->route.source, cpxRx->route.function, cpxRx->data[0], cpxRx->data);
+  DEBUG_PRINT("Got packet from %d for %d, internal function=%d\n", cpxRx->route.source, cpxRx->route.function, cpxRx->data[0]);
   // TODO switch case to call different functions
   switch (cpxRx->data[0]) {
     case CPX_IF_GOTO_FIXED_COORDINATES: {

@@ -47,10 +47,9 @@ void appMain() {
     DEBUG_PRINT("Hello! I am the stm_esp_cpx app\n");
     DEBUG_PRINT("int: %d, float: %d, uint8_t: %d\n", sizeof(int), sizeof(float), sizeof(uint8_t));
     aideck_parameters_init();
-    vTaskDelay(M2T(3000));
     initAppCpx();
     xTaskCreate(taskAppParameters, "taskAppParameters", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    xTaskCreate(taskAppControl, "taskAppControl", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    xTaskCreate(taskAppControl, "taskAppControl", 512, NULL, 1, NULL); // taskAppControl needs the bigger stack
     while(1) {
       vTaskDelay(M2T(2000));
     }
