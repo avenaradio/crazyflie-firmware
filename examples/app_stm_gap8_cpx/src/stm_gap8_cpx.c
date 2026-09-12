@@ -49,7 +49,7 @@ void appMain() {
     aideck_parameters_init();
     initAppCpx();
     xTaskCreate(taskAppParameters, "taskAppParameters", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    xTaskCreate(taskAppControl, "taskAppControl", 512, NULL, 1, NULL); // taskAppControl needs the bigger stack
+    xTaskCreate(taskAppControl, "taskAppControl", 1024, NULL, 1, NULL); // taskAppControl needs the bigger stack
     while(1) {
       vTaskDelay(M2T(2000));
     }

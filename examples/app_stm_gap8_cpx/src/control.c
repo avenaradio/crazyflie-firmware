@@ -27,7 +27,9 @@ void taskAppControl(void *argument){
     vTaskDelay(M2T(1000));
     while(1){
         vTaskDelay(M2T(50));
+        //DEBUG_PRINT("taskAppControl: while: started\n");
         if (goto_fix_position_get(&received_coordinates) == pdPASS) {
+            //DEBUG_PRINT("taskAppControl: got fix position\n");
             if (parameters_get(&current_parameters) == pdPASS) {
                 GoToFixPosition_t current_position = {
                     .x = current_parameters.x,
