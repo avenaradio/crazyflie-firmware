@@ -79,7 +79,7 @@ void goToFixedCoordinates(float x, float y, float z, float duration_s){
     }
     // Goto coordinates
     crtpCommanderHighLevelGoTo2(x, y, z, 0, duration_s, false, false);
-    vTaskDelay(M2T((uint32_t)(duration_s * 1000.0f)));
+    vTaskDelay(M2T((uint32_t)(duration_s * 800.0f)));
 }
 
 void land(float absoluteHeight_m, float duration_s){
