@@ -45,7 +45,7 @@
 
 void appMain() {
     DEBUG_PRINT("Hello! I am the stm_esp_cpx app\n");
-    DEBUG_PRINT("int: %d, float: %d, uint8_t: %d\n", sizeof(int), sizeof(float), sizeof(uint8_t));
+    //DEBUG_PRINT("int: %d, float: %d, uint8_t: %d\n", sizeof(int), sizeof(float), sizeof(uint8_t));
     aideck_parameters_init();
     initAppCpx();
     xTaskCreate(taskAppParameters, "taskAppParameters", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
