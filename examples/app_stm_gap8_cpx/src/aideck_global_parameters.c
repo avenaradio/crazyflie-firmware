@@ -8,7 +8,7 @@ QueueHandle_t goto_fix_position_queue = NULL;
 
 void aideck_parameters_init(void){
     parameters_queue = xQueueCreate(1, sizeof(Parameters_t));
-    goto_fix_position_queue = xQueueCreate(30, sizeof(GoToFixPosition_t));
+    goto_fix_position_queue = xQueueCreate(100, sizeof(GoToFixPosition_t));
 }
 
 BaseType_t parameters_set(const Parameters_t *parameters){

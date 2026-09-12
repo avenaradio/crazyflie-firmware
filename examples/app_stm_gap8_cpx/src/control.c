@@ -1,5 +1,6 @@
 #include <float.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -14,19 +15,22 @@
 #include "debug.h"
 #include "aideck_global_parameters.h"
 
+#define TOLERANCE 0.02f // in m
+
 //Prototypes
 void goToFixedCoordinates(float x, float y, float z, float duration_s);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
+bool float_is_close(float a, float b);
 
 void taskAppControl(void *argument){
     GoToFixPosition_t received_coordinates;
     Parameters_t current_parameters;
     // Init high-level commander
     crtpCommanderHighLevelInit();
-    vTaskDelay(M2T(1000));
+    vTaskDelay(M2T(500));
     while(1){
-        vTaskDelay(M2T(50));
+        vTaskDelay(M2T(10));
         //DEBUG_PRINT("taskAppControl: while: started\n");
         if (goto_fix_position_get(&received_coordinates) == pdPASS) {
             //DEBUG_PRINT("taskAppControl: got fix position\n");
@@ -47,6 +51,18 @@ void taskAppControl(void *argument){
                 }
                 DEBUG_PRINT("Moving to x=%f, y=%f, z=%f, travel_time=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z, (double)travel_time);
                 goToFixedCoordinates(received_coordinates.x, received_coordinates.y, received_coordinates.z, travel_time);
+                // Wait until coords reached
+                // while(1){
+                //     vTaskDelay(M2T(10));
+                //     if (parameters_get(&current_parameters) == pdPASS) {
+                //         if(float_is_close(received_coordinates.x, current_parameters.x) &&
+                //         float_is_close(received_coordinates.x, current_parameters.x) &&
+                //         float_is_close(received_coordinates.x, current_parameters.x))
+                //         {
+                //             break;
+                //         }
+                //     }
+                // }
             }
         }
     }
@@ -62,7 +78,7 @@ void goToFixedCoordinates(float x, float y, float z, float duration_s){
         vTaskDelay(M2T(2000));
     }
     // Goto coordinates
-    crtpCommanderHighLevelGoTo(x, y, z, 0, duration_s, false);
+    crtpCommanderHighLevelGoTo2(x, y, z, 0, duration_s, false, false);
     vTaskDelay(M2T((uint32_t)(duration_s * 1000.0f)));
 }
 
@@ -83,4 +99,8 @@ float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2){
     float dy = point2.y - point1.y;
     float dz = point2.z - point1.z;
     return sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+}
+
+bool float_is_close(float a, float b){
+    return fabsf(a - b) <= TOLERANCE;
 }
