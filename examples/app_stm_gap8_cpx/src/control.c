@@ -22,8 +22,8 @@
 Parameters_t current_parameters = {0};
 
 //Prototypes
-int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos, Parameters_t *current_params);
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint, Parameters_t current_params);
+int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos);
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
 GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
@@ -44,44 +44,46 @@ void taskAppControl(void *argument){
                     .y = current_parameters.y,
                     .z = current_parameters.z
                 };
-                DEBUG_PRINT("Moving to x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
-                goToFixedCoordinates(current_position, received_coordinates, current_parameters);
+                DEBUG_PRINT("Current c: x=%f, y=%f, z=%f\n", (double)current_parameters.x, (double)current_parameters.y, (double)current_parameters.z);
+                DEBUG_PRINT("Moving to: x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
+                // goToFixedCoordinates(current_position, received_coordinates);
+                travelTo(current_position, received_coordinates);
             }
         }
     }
 }
 
-// int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos, Parameters_t *current_params){
-//     size_t count;
-//     GoToFixPosition_t *waypoints = createLinearWaypoints(current_pos, new_pos, WAYPOINT_DISTANCE, &count);
-//     if (waypoints == NULL) {
-//         return false;
-//     }
-//     for (size_t i = 1; i < count; i++) {
-//         if (parameters_get(current_params) == pdPASS) {
-//             // This only works with yaw = 0
-//             // if(current_params->front_mr < 0.30f){
-//             //     waypoints[i].x -= (0.30f - current_params->front_mr);
-//             // }
-//             // if(current_params->back_mr < 0.30f){
-//             //     waypoints[i].x += (0.30f - current_params->back_mr);
-//             // }
-//             // if(current_params->left_mr < 0.30f){
-//             //     waypoints[i].y -= (0.30f - current_params->left_mr);
-//             // }
-//             // if(current_params->right_mr < 0.30f){
-//             //     waypoints[i].y += (0.30f - current_params->right_mr);
-//             // }
-//             goToFixedCoordinates(waypoints[i]);
-//         }
-//     }
-//     free(waypoints);
-//     return true;
-//     // goToFixedCoordinates(new_pos);
-//     // return true;
-// }
+int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos){
+    size_t count;
+    GoToFixPosition_t *waypoints = createLinearWaypoints(current_pos, new_pos, WAYPOINT_DISTANCE, &count);
+    if (waypoints == NULL) {
+        return false;
+    }
+    for (size_t i = 1; i < count; i++) {
+        if (parameters_get(&current_parameters) == pdPASS) {
+            // This only works with yaw = 0
+            // if(current_params->front_mr < 0.30f){
+            //     waypoints[i].x -= (0.30f - current_params->front_mr);
+            // }
+            // if(current_params->back_mr < 0.30f){
+            //     waypoints[i].x += (0.30f - current_params->back_mr);
+            // }
+            // if(current_params->left_mr < 0.30f){
+            //     waypoints[i].y -= (0.30f - current_params->left_mr);
+            // }
+            // if(current_params->right_mr < 0.30f){
+            //     waypoints[i].y += (0.30f - current_params->right_mr);
+            // }
+            goToFixedCoordinates(waypoints[i-1], waypoints[i]);
+        }
+    }
+    free(waypoints);
+    return true;
+    // goToFixedCoordinates(new_pos);
+    // return true;
+}
 
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint, Parameters_t current_params){
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
     float distance = calculateDistance(start_waypoint, end_waypoint);
     // Calculate and check travel time
     float travel_time = distance / MAX_SPEED;
