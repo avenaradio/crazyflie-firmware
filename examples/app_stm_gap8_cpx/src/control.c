@@ -101,7 +101,14 @@ int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPo
     }
     // Goto coordinates
     int result = crtpCommanderHighLevelGoTo2(end_waypoint.x, end_waypoint.y, end_waypoint.z, 0, travel_time, false, false);
-    vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
+    // Wait non blocking
+    TickType_t startTime = xTaskGetTickCount();
+    TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(travel_time * 800.0f));
+    while ((xTaskGetTickCount() - startTime) < durationTicks) {
+        // CHeck for obstackle and modify next_position if needed
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    // vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
     return result;
 }
 
