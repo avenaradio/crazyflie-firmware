@@ -23,7 +23,16 @@ logVarId_t idX;
 logVarId_t idY;
 logVarId_t idZ;
 logVarId_t idBatteryP;
+logVarId_t idLeft;
+logVarId_t idRight;
+logVarId_t idFront;
+logVarId_t idBack;
+
 Parameters_t parameters = {0};
+
+paramVarId_t idMultiranger;
+paramVarId_t idAi;
+paramVarId_t idLighthouse;
 
 // Arrays for average
 float xa[SAMPLES_FOR_AVERAGE] = {0.0f};
@@ -43,6 +52,14 @@ void taskAppParameters(void *argument){
     idY = logGetVarId("stateEstimate", "y");
     idZ = logGetVarId("stateEstimate", "z");
     idBatteryP = logGetVarId("pm", "batteryLevel");
+    idLeft = logGetVarId("range", "left");
+    idRight = logGetVarId("range", "right");
+    idFront = logGetVarId("range", "front");
+    idBack = logGetVarId("range", "back");
+
+    idMultiranger = paramGetVarId("deck", "bcMultiranger");
+    idAi = paramGetVarId("deck", "bcAI");
+    idLighthouse = paramGetVarId("deck", "bcLighthouse4");
 
     while(1){
         vTaskDelay(M2T(SAMPLE_TIME));
@@ -52,6 +69,11 @@ void taskAppParameters(void *argument){
 
 void getParameters(void){
     static int counter = 0;
+    parameters.left_mr = logGetFloat(idLeft) / 1000.0f;
+    parameters.right_mr = logGetFloat(idRight) / 1000.0f;
+    parameters.front_mr = logGetFloat(idFront) / 1000.0f;
+    parameters.back_mr = logGetFloat(idBack) / 1000.0f;
+    // DEBUG_PRINT("Multiranger left=%f, right=%f, front=%f, back=%f\n", (double)parameters.left_mr, (double)parameters.right_mr, (double)parameters.front_mr, (double)parameters.back_mr);
     if(counter >= SAMPLES_FOR_AVERAGE){
         counter = 0;
         parameters.batteryP = logGetFloat(idBatteryP);

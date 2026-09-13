@@ -9,6 +9,10 @@ typedef struct{
     float y;
     float z;
     float batteryP;
+    float left_mr;
+    float right_mr;
+    float front_mr;
+    float back_mr;
 } Parameters_t;
 BaseType_t parameters_set(const Parameters_t *parameters);
 BaseType_t parameters_get(Parameters_t *parameters);
