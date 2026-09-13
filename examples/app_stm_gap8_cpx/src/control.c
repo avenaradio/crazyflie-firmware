@@ -1,5 +1,7 @@
 #include <float.h>
 #include <math.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #include "FreeRTOS.h"
@@ -15,17 +17,19 @@
 #include "debug.h"
 #include "aideck_global_parameters.h"
 
-#define TOLERANCE 0.02f // in m
+#define WAYPOINT_DISTANCE 0.02f // in m
+#define WAYPOINT_TIME 1.0f / MAX_SPEED * WAYPOINT_DISTANCE
 
 //Prototypes
-void goToFixedCoordinates(float x, float y, float z, float duration_s);
+int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos, Parameters_t *current_params);
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
-bool float_is_close(float a, float b);
+GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
 
 void taskAppControl(void *argument){
-    GoToFixPosition_t received_coordinates;
-    Parameters_t current_parameters;
+    GoToFixPosition_t received_coordinates ={0};
+    Parameters_t current_parameters = {0};
     // Init high-level commander
     crtpCommanderHighLevelInit();
     vTaskDelay(M2T(500));
@@ -40,35 +44,53 @@ void taskAppControl(void *argument){
                     .y = current_parameters.y,
                     .z = current_parameters.z
                 };
-                float distance = calculateDistance(current_position, received_coordinates);
-                // Calculate and check travel time
-                float travel_time = distance / MAX_SPEED;
-                if (!isfinite((double)travel_time) || travel_time < 0.1f) {
-                    travel_time = 0.1f;
-                }
-                if (travel_time > 60.0f) {
-                    travel_time = 60.0f;
-                }
-                DEBUG_PRINT("Moving to x=%f, y=%f, z=%f, travel_time=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z, (double)travel_time);
-                goToFixedCoordinates(received_coordinates.x, received_coordinates.y, received_coordinates.z, travel_time);
-                // Wait until coords reached
-                // while(1){
-                //     vTaskDelay(M2T(10));
-                //     if (parameters_get(&current_parameters) == pdPASS) {
-                //         if(float_is_close(received_coordinates.x, current_parameters.x) &&
-                //         float_is_close(received_coordinates.x, current_parameters.x) &&
-                //         float_is_close(received_coordinates.x, current_parameters.x))
-                //         {
-                //             break;
-                //         }
-                //     }
-                // }
+                DEBUG_PRINT("Moving to x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
+                goToFixedCoordinates(current_position, received_coordinates);
             }
         }
     }
 }
 
-void goToFixedCoordinates(float x, float y, float z, float duration_s){
+// int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos, Parameters_t *current_params){
+//     size_t count;
+//     GoToFixPosition_t *waypoints = createLinearWaypoints(current_pos, new_pos, WAYPOINT_DISTANCE, &count);
+//     if (waypoints == NULL) {
+//         return false;
+//     }
+//     for (size_t i = 1; i < count; i++) {
+//         if (parameters_get(current_params) == pdPASS) {
+//             // This only works with yaw = 0
+//             // if(current_params->front_mr < 0.30f){
+//             //     waypoints[i].x -= (0.30f - current_params->front_mr);
+//             // }
+//             // if(current_params->back_mr < 0.30f){
+//             //     waypoints[i].x += (0.30f - current_params->back_mr);
+//             // }
+//             // if(current_params->left_mr < 0.30f){
+//             //     waypoints[i].y -= (0.30f - current_params->left_mr);
+//             // }
+//             // if(current_params->right_mr < 0.30f){
+//             //     waypoints[i].y += (0.30f - current_params->right_mr);
+//             // }
+//             goToFixedCoordinates(waypoints[i]);
+//         }
+//     }
+//     free(waypoints);
+//     return true;
+//     // goToFixedCoordinates(new_pos);
+//     // return true;
+// }
+
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
+    float distance = calculateDistance(start_waypoint, end_waypoint);
+    // Calculate and check travel time
+    float travel_time = distance / MAX_SPEED;
+    if (!isfinite((double)travel_time) || travel_time < 0.1f) {
+        travel_time = 0.1f;
+    }
+    if (travel_time > 60.0f) {
+        travel_time = 60.0f;
+    }
     if(!supervisorIsFlying()){
         // Arm
         supervisorRequestArming(true);
@@ -78,8 +100,9 @@ void goToFixedCoordinates(float x, float y, float z, float duration_s){
         vTaskDelay(M2T(2000));
     }
     // Goto coordinates
-    crtpCommanderHighLevelGoTo2(x, y, z, 0, duration_s, false, false);
-    vTaskDelay(M2T((uint32_t)(duration_s * 800.0f)));
+    int result = crtpCommanderHighLevelGoTo2(end_waypoint.x, end_waypoint.y, end_waypoint.z, 0, travel_time, false, false);
+    vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
+    return result;
 }
 
 void land(float absoluteHeight_m, float duration_s){
@@ -88,6 +111,8 @@ void land(float absoluteHeight_m, float duration_s){
     vTaskDelay(M2T(duration_s * 1000));
     supervisorRequestArming(false);
 }
+
+// --------------------------------------- HELPER FUNCTIONS -------------------------------------------- //
 
 /**
  * Calculates the Euclidean distance between two 3D points.
@@ -101,6 +126,50 @@ float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2){
     return sqrtf((dx * dx) + (dy * dy) + (dz * dz));
 }
 
-bool float_is_close(float a, float b){
-    return fabsf(a - b) <= TOLERANCE;
+/**
+ * Creates waypoints from start to end.
+ *
+ * @param spacing: desired maximum distance between waypoints, in meters
+ * @param outCount: receives the number of generated waypoints
+ *
+ * @return Dynamically allocated waypoint array, or NULL on failure.
+ *
+ * The caller must free() the returned array.
+ */
+GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount){
+    if (outCount == NULL || spacing <= 0.0f) {
+        return NULL;
+    }
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+    float dz = end.z - start.z;
+    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+    // If both points are effectively identical
+    if (distance < 1e-6f) {
+        GoToFixPosition_t *waypoints = malloc(sizeof(GoToFixPosition_t));
+        if (waypoints == NULL) {
+            return NULL;
+        }
+        waypoints[0] = start;
+        *outCount = 1;
+        return waypoints;
+    }
+    // Number of intervals. ceil() ensures spacing is never greater
+    // than the requested spacing.
+    size_t segments = (size_t)ceilf(distance / spacing);
+    size_t waypointCount = segments + 1;
+    GoToFixPosition_t *waypoints = malloc(waypointCount * sizeof(GoToFixPosition_t));
+    if (waypoints == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < waypointCount; i++) {
+        float t = (float)i / (float)segments;
+        waypoints[i].x = start.x + t * dx;
+        waypoints[i].y = start.y + t * dy;
+        waypoints[i].z = start.z + t * dz;
+    }
+    // Make the final point exact, avoiding floating-point accumulation error
+    waypoints[waypointCount - 1] = end;
+    *outCount = waypointCount;
+    return waypoints;
 }
