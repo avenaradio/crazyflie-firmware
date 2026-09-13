@@ -62,18 +62,18 @@ int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_po
     for (size_t i = 1; i < count; i++) {
         if (parameters_get(&current_parameters) == pdPASS) {
             // This only works with yaw = 0
-            // if(current_params->front_mr < 0.30f){
-            //     waypoints[i].x -= (0.30f - current_params->front_mr);
-            // }
-            // if(current_params->back_mr < 0.30f){
-            //     waypoints[i].x += (0.30f - current_params->back_mr);
-            // }
-            // if(current_params->left_mr < 0.30f){
-            //     waypoints[i].y -= (0.30f - current_params->left_mr);
-            // }
-            // if(current_params->right_mr < 0.30f){
-            //     waypoints[i].y += (0.30f - current_params->right_mr);
-            // }
+            if(current_parameters.front_mr < 0.30f){
+                waypoints[i].x -= (0.30f - current_parameters.front_mr);
+            }
+            if(current_parameters.back_mr < 0.30f){
+                waypoints[i].x += (0.30f - current_parameters.back_mr);
+            }
+            if(current_parameters.left_mr < 0.30f){
+                waypoints[i].y -= (0.30f - current_parameters.left_mr);
+            }
+            if(current_parameters.right_mr < 0.30f){
+                waypoints[i].y += (0.30f - current_parameters.right_mr);
+            }
             goToFixedCoordinates(waypoints[i-1], waypoints[i]);
         }
     }
