@@ -18,18 +18,18 @@
 #include "aideck_global_parameters.h"
 
 #define WAYPOINT_DISTANCE 0.02f // in m
-#define WAYPOINT_TIME 1.0f / MAX_SPEED * WAYPOINT_DISTANCE
+
+Parameters_t current_parameters = {0};
 
 //Prototypes
 int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos, Parameters_t *current_params);
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint, Parameters_t current_params);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
 GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
 
 void taskAppControl(void *argument){
     GoToFixPosition_t received_coordinates ={0};
-    Parameters_t current_parameters = {0};
     // Init high-level commander
     crtpCommanderHighLevelInit();
     vTaskDelay(M2T(500));
@@ -45,7 +45,7 @@ void taskAppControl(void *argument){
                     .z = current_parameters.z
                 };
                 DEBUG_PRINT("Moving to x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
-                goToFixedCoordinates(current_position, received_coordinates);
+                goToFixedCoordinates(current_position, received_coordinates, current_parameters);
             }
         }
     }
@@ -81,7 +81,7 @@ void taskAppControl(void *argument){
 //     // return true;
 // }
 
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
+int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint, Parameters_t current_params){
     float distance = calculateDistance(start_waypoint, end_waypoint);
     // Calculate and check travel time
     float travel_time = distance / MAX_SPEED;
@@ -106,7 +106,21 @@ int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPo
     TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(travel_time * 800.0f));
     while ((xTaskGetTickCount() - startTime) < durationTicks) {
         // CHeck for obstackle and modify next_position if needed
-        vTaskDelay(pdMS_TO_TICKS(20));
+        // if (parameters_get(&current_params) == pdPASS) {
+        //     if(current_params->front_mr < 0.30f){
+        //         waypoints[i].x -= (0.30f - current_params->front_mr);
+        //     }
+        //     if(current_params->back_mr < 0.30f){
+        //         waypoints[i].x += (0.30f - current_params->back_mr);
+        //     }
+        //     if(current_params->left_mr < 0.30f){
+        //         waypoints[i].y -= (0.30f - current_params->left_mr);
+        //     }
+        //     if(current_params->right_mr < 0.30f){
+        //         waypoints[i].y += (0.30f - current_params->right_mr);
+        //     }
+        // }
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
     // vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
     return result;

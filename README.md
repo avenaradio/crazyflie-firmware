@@ -8,6 +8,7 @@ make -j$(nproc)
 ###### Flash
 Needs activ python enviroment with cflib installed (`pip install cflib`)
 ```sh
+source ~/git/audioguide_python/cf_python_venv/bin/activate
 cfloader flash build/cf21bl.bin stm32-fw -w radio://0/80/2M/E7E7E7E7E7
 ```
 
