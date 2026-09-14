@@ -153,10 +153,8 @@ bool avoid_collisions(float duration){
             }
             if(trigger_avoid) {
                 float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
-                vTaskDelay(pdMS_TO_TICKS(10));
-                // Block for recursive until safe position reached
-                avoid_collisions(time_to_wait);
-                return false;
+                startTime = xTaskGetTickCount();
+                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 800.0f));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -185,50 +183,50 @@ float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2){
     return sqrtf((dx * dx) + (dy * dy) + (dz * dz));
 }
 
-/**
- * Creates waypoints from start to end.
- *
- * @param spacing: desired maximum distance between waypoints, in meters
- * @param outCount: receives the number of generated waypoints
- *
- * @return Dynamically allocated waypoint array, or NULL on failure.
- *
- * The caller must free() the returned array.
- */
-GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount){
-    if (outCount == NULL || spacing <= 0.0f) {
-        return NULL;
-    }
-    float dx = end.x - start.x;
-    float dy = end.y - start.y;
-    float dz = end.z - start.z;
-    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-    // If both points are effectively identical
-    if (distance < 1e-6f) {
-        GoToFixPosition_t *waypoints = malloc(sizeof(GoToFixPosition_t));
-        if (waypoints == NULL) {
-            return NULL;
-        }
-        waypoints[0] = start;
-        *outCount = 1;
-        return waypoints;
-    }
-    // Number of intervals. ceil() ensures spacing is never greater
-    // than the requested spacing.
-    size_t segments = (size_t)ceilf(distance / spacing);
-    size_t waypointCount = segments + 1;
-    GoToFixPosition_t *waypoints = malloc(waypointCount * sizeof(GoToFixPosition_t));
-    if (waypoints == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < waypointCount; i++) {
-        float t = (float)i / (float)segments;
-        waypoints[i].x = start.x + t * dx;
-        waypoints[i].y = start.y + t * dy;
-        waypoints[i].z = start.z + t * dz;
-    }
-    // Make the final point exact, avoiding floating-point accumulation error
-    waypoints[waypointCount - 1] = end;
-    *outCount = waypointCount;
-    return waypoints;
-}
+// /**
+//  * Creates waypoints from start to end.
+//  *
+//  * @param spacing: desired maximum distance between waypoints, in meters
+//  * @param outCount: receives the number of generated waypoints
+//  *
+//  * @return Dynamically allocated waypoint array, or NULL on failure.
+//  *
+//  * The caller must free() the returned array.
+//  */
+// GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount){
+//     if (outCount == NULL || spacing <= 0.0f) {
+//         return NULL;
+//     }
+//     float dx = end.x - start.x;
+//     float dy = end.y - start.y;
+//     float dz = end.z - start.z;
+//     float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+//     // If both points are effectively identical
+//     if (distance < 1e-6f) {
+//         GoToFixPosition_t *waypoints = malloc(sizeof(GoToFixPosition_t));
+//         if (waypoints == NULL) {
+//             return NULL;
+//         }
+//         waypoints[0] = start;
+//         *outCount = 1;
+//         return waypoints;
+//     }
+//     // Number of intervals. ceil() ensures spacing is never greater
+//     // than the requested spacing.
+//     size_t segments = (size_t)ceilf(distance / spacing);
+//     size_t waypointCount = segments + 1;
+//     GoToFixPosition_t *waypoints = malloc(waypointCount * sizeof(GoToFixPosition_t));
+//     if (waypoints == NULL) {
+//         return NULL;
+//     }
+//     for (size_t i = 0; i < waypointCount; i++) {
+//         float t = (float)i / (float)segments;
+//         waypoints[i].x = start.x + t * dx;
+//         waypoints[i].y = start.y + t * dy;
+//         waypoints[i].z = start.z + t * dz;
+//     }
+//     // Make the final point exact, avoiding floating-point accumulation error
+//     waypoints[waypointCount - 1] = end;
+//     *outCount = waypointCount;
+//     return waypoints;
+// }
