@@ -30,6 +30,7 @@ bool avoid_collisions(float duration);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
 GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
+static float clamp_float(float value, float min, float max);
 
 void taskAppControl(void *argument){
     GoToFixPosition_t received_coordinates ={0};
@@ -109,26 +110,26 @@ bool avoid_collisions(float duration){
             avoid_position = pos_from_params;
             // This only works with yaw = 0
             if(current_parameters.front_mr < AVOID_RADIUS){
-                avoid_position.x -= (AVOID_RADIUS - current_parameters.front_mr);
+                avoid_position.x -= (clamp_float((AVOID_RADIUS - current_parameters.front_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
             if(current_parameters.back_mr < AVOID_RADIUS){
-                avoid_position.x += (AVOID_RADIUS - current_parameters.back_mr);
+                avoid_position.x += (clamp_float((AVOID_RADIUS - current_parameters.back_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
             if(current_parameters.left_mr < AVOID_RADIUS){
-                avoid_position.y -= (AVOID_RADIUS - current_parameters.left_mr);
+                avoid_position.y -= (clamp_float((AVOID_RADIUS - current_parameters.left_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
             if(current_parameters.right_mr < AVOID_RADIUS){
-                avoid_position.y += (AVOID_RADIUS - current_parameters.right_mr);
+                avoid_position.y += (clamp_float((AVOID_RADIUS - current_parameters.right_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
             if(trigger_avoid) {
                 float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
                 successful = false;
                 startTime = xTaskGetTickCount();
-                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 1200.0f));
+                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 800.0f));
             }
         }
     }
@@ -154,4 +155,13 @@ float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2){
     float dy = point2.y - point1.y;
     float dz = point2.z - point1.z;
     return sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+}
+
+/*
+ * Clamp a value to the given range.
+ */
+static float clamp_float(float value, float min, float max){
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
 }
