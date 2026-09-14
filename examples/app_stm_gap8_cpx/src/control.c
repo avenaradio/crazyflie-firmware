@@ -101,7 +101,7 @@ bool avoid_collisions(float duration){
     TickType_t startTime = xTaskGetTickCount();
     TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(duration * 1200.0f));
     while ((xTaskGetTickCount() - startTime) < durationTicks) {
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(15)); // Must stay at beginning of while loop (20 too slow, 10 good, 5 is aggressive, 15 is good)
         if (parameters_get(&current_parameters) == pdPASS) {
             bool trigger_avoid = false;
             pos_from_params.x = current_parameters.x;

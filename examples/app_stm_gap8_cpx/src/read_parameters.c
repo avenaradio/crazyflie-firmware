@@ -15,8 +15,8 @@
 #define DEBUG_MODULE "APP_PARAMETERS_C"
 #include "debug.h"
 
-#define SAMPLES_FOR_AVERAGE 10
-#define SAMPLE_TIME 10 // ms
+#define SAMPLES_FOR_AVERAGE 20
+#define SAMPLE_TIME 5 // ms
 
 // Parameters
 logVarId_t idX;
