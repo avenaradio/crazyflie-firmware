@@ -1,6 +1,7 @@
 #include <float.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -18,18 +19,21 @@
 #include "aideck_global_parameters.h"
 
 #define WAYPOINT_DISTANCE 0.02f // in m
+#define AVOID_RADIUS 0.30f
 
 Parameters_t current_parameters = {0};
 
 //Prototypes
 int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos);
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
+float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
+bool avoid_collisions(float duration);
 void land(float absoluteHeight_m, float duration_s);
 float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
 GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
 
 void taskAppControl(void *argument){
     GoToFixPosition_t received_coordinates ={0};
+    float time_to_wait = 0;
     // Init high-level commander
     crtpCommanderHighLevelInit();
     vTaskDelay(M2T(500));
@@ -38,52 +42,58 @@ void taskAppControl(void *argument){
         //DEBUG_PRINT("taskAppControl: while: started\n");
         if (goto_fix_position_get(&received_coordinates) == pdPASS) {
             //DEBUG_PRINT("taskAppControl: got fix position\n");
-            if (parameters_get(&current_parameters) == pdPASS) {
-                GoToFixPosition_t current_position = {
-                    .x = current_parameters.x,
-                    .y = current_parameters.y,
-                    .z = current_parameters.z
-                };
-                DEBUG_PRINT("Current c: x=%f, y=%f, z=%f\n", (double)current_parameters.x, (double)current_parameters.y, (double)current_parameters.z);
-                DEBUG_PRINT("Moving to: x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
-                // goToFixedCoordinates(current_position, received_coordinates);
-                travelTo(current_position, received_coordinates);
+            bool goto_successful = false;
+            while (!goto_successful){
+                if (parameters_get(&current_parameters) == pdPASS) {
+                    GoToFixPosition_t current_position = {
+                        .x = current_parameters.x,
+                        .y = current_parameters.y,
+                        .z = current_parameters.z
+                    };
+                    DEBUG_PRINT("Current c: x=%f, y=%f, z=%f\n", (double)current_parameters.x, (double)current_parameters.y, (double)current_parameters.z);
+                    DEBUG_PRINT("Moving to: x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
+                    time_to_wait = goToFixedCoordinates(current_position, received_coordinates);
+                    goto_successful =  avoid_collisions(time_to_wait);
+                }
             }
-        }
+        } // Else no new position, avoid
     }
 }
 
-int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos){
-    size_t count;
-    GoToFixPosition_t *waypoints = createLinearWaypoints(current_pos, new_pos, WAYPOINT_DISTANCE, &count);
-    if (waypoints == NULL) {
-        return false;
-    }
-    for (size_t i = 1; i < count; i++) {
-        if (parameters_get(&current_parameters) == pdPASS) {
-            // This only works with yaw = 0
-            if(current_parameters.front_mr < 0.30f){
-                waypoints[i].x -= (0.30f - current_parameters.front_mr);
-            }
-            if(current_parameters.back_mr < 0.30f){
-                waypoints[i].x += (0.30f - current_parameters.back_mr);
-            }
-            if(current_parameters.left_mr < 0.30f){
-                waypoints[i].y -= (0.30f - current_parameters.left_mr);
-            }
-            if(current_parameters.right_mr < 0.30f){
-                waypoints[i].y += (0.30f - current_parameters.right_mr);
-            }
-            goToFixedCoordinates(waypoints[i-1], waypoints[i]);
-        }
-    }
-    free(waypoints);
-    return true;
-    // goToFixedCoordinates(new_pos);
-    // return true;
-}
+// int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos){
+//     size_t count;
+//     GoToFixPosition_t *waypoints = createLinearWaypoints(current_pos, new_pos, WAYPOINT_DISTANCE, &count);
+//     if (waypoints == NULL) {
+//         return false;
+//     }
+//     for (size_t i = 1; i < count; i++) {
+//         if (parameters_get(&current_parameters) == pdPASS) {
+//             // This only works with yaw = 0
+//             if(current_parameters.front_mr < AVOID_RADIUS){
+//                 waypoints[i].x -= (AVOID_RADIUS - current_parameters.front_mr);
+//             }
+//             if(current_parameters.back_mr < AVOID_RADIUS){
+//                 waypoints[i].x += (AVOID_RADIUS - current_parameters.back_mr);
+//             }
+//             if(current_parameters.left_mr < AVOID_RADIUS){
+//                 waypoints[i].y -= (AVOID_RADIUS - current_parameters.left_mr);
+//             }
+//             if(current_parameters.right_mr < AVOID_RADIUS){
+//                 waypoints[i].y += (AVOID_RADIUS - current_parameters.right_mr);
+//             }
+//             goToFixedCoordinates(waypoints[i-1], waypoints[i]);
+//         }
+//     }
+//     free(waypoints);
+//     return true;
+//     // goToFixedCoordinates(new_pos);
+//     // return true;
+// }
 
-int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
+/**
+* @return float time needed for movement in s
+*/
+float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
     float distance = calculateDistance(start_waypoint, end_waypoint);
     // Calculate and check travel time
     float travel_time = distance / MAX_SPEED;
@@ -102,30 +112,56 @@ int goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPo
         vTaskDelay(M2T(2000));
     }
     // Goto coordinates
-    int result = crtpCommanderHighLevelGoTo2(end_waypoint.x, end_waypoint.y, end_waypoint.z, 0, travel_time, false, false);
+    crtpCommanderHighLevelGoTo2(end_waypoint.x, end_waypoint.y, end_waypoint.z, 0, travel_time, false, false);
+    // vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
+    return travel_time;
+}
+
+/** Wait and check if object close
+* @return true if no object detected, false if object detected and moved to safe position
+*/
+bool avoid_collisions(float duration){
     // Wait non blocking
+    GoToFixPosition_t pos_from_params = {0};
+    GoToFixPosition_t avoid_position = {0};
     TickType_t startTime = xTaskGetTickCount();
-    TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(travel_time * 800.0f));
+    TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(duration * 800.0f));
     while ((xTaskGetTickCount() - startTime) < durationTicks) {
-        // CHeck for obstackle and modify next_position if needed
-        // if (parameters_get(&current_params) == pdPASS) {
-        //     if(current_params->front_mr < 0.30f){
-        //         waypoints[i].x -= (0.30f - current_params->front_mr);
-        //     }
-        //     if(current_params->back_mr < 0.30f){
-        //         waypoints[i].x += (0.30f - current_params->back_mr);
-        //     }
-        //     if(current_params->left_mr < 0.30f){
-        //         waypoints[i].y -= (0.30f - current_params->left_mr);
-        //     }
-        //     if(current_params->right_mr < 0.30f){
-        //         waypoints[i].y += (0.30f - current_params->right_mr);
-        //     }
-        // }
+        // CHeck for obstackle and modify next_position if needed ??????????????????????????
+        if (parameters_get(&current_parameters) == pdPASS) {
+            bool trigger_avoid = false;
+            pos_from_params.x = current_parameters.x;
+            pos_from_params.y = current_parameters.y;
+            pos_from_params.z = current_parameters.z;
+            avoid_position = pos_from_params;
+            // This only works with yaw = 0
+            if(current_parameters.front_mr < AVOID_RADIUS){
+                avoid_position.x -= (AVOID_RADIUS - current_parameters.front_mr);
+                trigger_avoid = true;
+            }
+            if(current_parameters.back_mr < AVOID_RADIUS){
+                avoid_position.x += (AVOID_RADIUS - current_parameters.back_mr);
+                trigger_avoid = true;
+            }
+            if(current_parameters.left_mr < AVOID_RADIUS){
+                avoid_position.y -= (AVOID_RADIUS - current_parameters.left_mr);
+                trigger_avoid = true;
+            }
+            if(current_parameters.right_mr < AVOID_RADIUS){
+                avoid_position.y += (AVOID_RADIUS - current_parameters.right_mr);
+                trigger_avoid = true;
+            }
+            if(trigger_avoid) {
+                float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
+                vTaskDelay(pdMS_TO_TICKS(10));
+                // Block for recursive until safe position reached
+                avoid_collisions(time_to_wait);
+                return false;
+            }
+        }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-    // vTaskDelay(M2T((uint32_t)(travel_time * 800.0f)));
-    return result;
+    return true;
 }
 
 void land(float absoluteHeight_m, float duration_s){
