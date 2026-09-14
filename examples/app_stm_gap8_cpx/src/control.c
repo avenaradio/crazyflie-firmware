@@ -128,7 +128,7 @@ bool avoid_collisions(float duration){
                 float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
                 successful = false;
                 startTime = xTaskGetTickCount();
-                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 800.0f));
+                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 1200.0f));
             }
         }
     }
