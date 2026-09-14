@@ -19,7 +19,7 @@
 #include "aideck_global_parameters.h"
 
 #define WAYPOINT_DISTANCE 0.02f // in m
-#define AVOID_RADIUS 0.30f // in m
+#define AVOID_RADIUS 0.40f // in m
 
 Parameters_t current_parameters = {0};
 
@@ -68,9 +68,9 @@ float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFix
     float distance = calculateDistance(start_waypoint, end_waypoint);
     // Calculate and check travel time
     float travel_time = distance / MAX_SPEED;
-    if (!isfinite((double)travel_time) || travel_time < 0.1f) {
-        travel_time = 0.1f;
-    }
+    // if (!isfinite((double)travel_time) || travel_time < 0.01f) {
+    //     travel_time = 0.01f;
+    // }
     if (travel_time > 60.0f) {
         travel_time = 60.0f;
     }
@@ -99,7 +99,7 @@ bool avoid_collisions(float duration){
     GoToFixPosition_t pos_from_params = {0};
     GoToFixPosition_t avoid_position = {0};
     TickType_t startTime = xTaskGetTickCount();
-    TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(duration * 800.0f));
+    TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(duration * 1200.0f));
     while ((xTaskGetTickCount() - startTime) < durationTicks) {
         vTaskDelay(pdMS_TO_TICKS(10));
         if (parameters_get(&current_parameters) == pdPASS) {
@@ -126,10 +126,11 @@ bool avoid_collisions(float duration){
                 trigger_avoid = true;
             }
             if(trigger_avoid) {
+                DEBUG_PRINT("Obstackle detected: front=%f, back=%f, left=%f, right=%f\n", (double)current_parameters.front_mr, (double)current_parameters.back_mr, (double)current_parameters.left_mr, (double)current_parameters.right_mr);
                 float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
                 successful = false;
                 startTime = xTaskGetTickCount();
-                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 800.0f));
+                durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 1200.0f));
             }
         }
     }
