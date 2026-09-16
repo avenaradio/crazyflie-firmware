@@ -8,6 +8,7 @@ typedef struct{
     float x;
     float y;
     float z;
+    float speed;
     float batteryP;
     float left_mr;
     float right_mr;

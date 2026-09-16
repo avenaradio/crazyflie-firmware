@@ -19,7 +19,8 @@
 #include "aideck_global_parameters.h"
 
 #define WAYPOINT_DISTANCE 0.02f // in m
-#define AVOID_RADIUS 0.40f // in m
+#define AVOID_RADIUS 0.35f // in m
+#define DYNAMIC_AVOID_RADIUS 0.15f // in m
 
 Parameters_t current_parameters = {0};
 
@@ -95,7 +96,7 @@ float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFix
 */
 bool avoid_collisions(float duration){
     bool successful = true;
-    // Wait non blocking
+    float radius = 0.0f;
     GoToFixPosition_t pos_from_params = {0};
     GoToFixPosition_t avoid_position = {0};
     TickType_t startTime = xTaskGetTickCount();
@@ -108,21 +109,24 @@ bool avoid_collisions(float duration){
             pos_from_params.y = current_parameters.y;
             pos_from_params.z = current_parameters.z;
             avoid_position = pos_from_params;
+            radius = current_parameters.speed / MAX_SPEED * DYNAMIC_AVOID_RADIUS;
+            radius += AVOID_RADIUS;
+            // radius = AVOID_RADIUS;
             // This only works with yaw = 0
-            if(current_parameters.front_mr < AVOID_RADIUS){
-                avoid_position.x -= (clamp_float((AVOID_RADIUS - current_parameters.front_mr), 0.0f, 0.1f));
+            if(current_parameters.front_mr < radius){
+                avoid_position.x -= (clamp_float((radius - current_parameters.front_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
-            if(current_parameters.back_mr < AVOID_RADIUS){
-                avoid_position.x += (clamp_float((AVOID_RADIUS - current_parameters.back_mr), 0.0f, 0.1f));
+            if(current_parameters.back_mr < radius){
+                avoid_position.x += (clamp_float((radius - current_parameters.back_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
-            if(current_parameters.left_mr < AVOID_RADIUS){
-                avoid_position.y -= (clamp_float((AVOID_RADIUS - current_parameters.left_mr), 0.0f, 0.1f));
+            if(current_parameters.left_mr < radius){
+                avoid_position.y -= (clamp_float((radius - current_parameters.left_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
-            if(current_parameters.right_mr < AVOID_RADIUS){
-                avoid_position.y += (clamp_float((AVOID_RADIUS - current_parameters.right_mr), 0.0f, 0.1f));
+            if(current_parameters.right_mr < radius){
+                avoid_position.y += (clamp_float((radius - current_parameters.right_mr), 0.0f, 0.1f));
                 trigger_avoid = true;
             }
             if(trigger_avoid) {

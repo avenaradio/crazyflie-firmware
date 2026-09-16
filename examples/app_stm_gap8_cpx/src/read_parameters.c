@@ -77,16 +77,28 @@ void getParameters(void){
     if(counter >= SAMPLES_FOR_AVERAGE){
         counter = 0;
         parameters.batteryP = logGetFloat(idBatteryP);
+        GoToFixPosition_t last_pos = {
+            .x = parameters.x,
+            .y = parameters.y,
+            .z = parameters.z
+        };
         calculateAverages();
-        BaseType_t result = parameters_set(&parameters);
-            if (result != pdPASS) {
-                DEBUG_PRINT("Failed to set parameters_set\n");
-            }
+        GoToFixPosition_t current_pos = {
+            .x = parameters.x,
+            .y = parameters.y,
+            .z = parameters.z
+        };
+        float distance_traveled = calculateDistance(last_pos, current_pos);
+        parameters.speed = distance_traveled / (SAMPLES_FOR_AVERAGE * SAMPLE_TIME / 1000.0f);
     }
     xa[counter] = logGetFloat(idX);
     ya[counter] = logGetFloat(idY);
     za[counter] = logGetFloat(idZ);
     counter++;
+    BaseType_t result = parameters_set(&parameters);
+    if (result != pdPASS) {
+        DEBUG_PRINT("Failed to set parameters_set\n");
+    }
 }
 
 void calculateAverages(void){
