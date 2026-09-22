@@ -1,6 +1,6 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
-void taskAppParameters(void *argument);
+void parameters_task(void *argument);
 
 #endif

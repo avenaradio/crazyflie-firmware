@@ -10,7 +10,7 @@
 
 #include "app_cpx.h"
 #include "control.h"
-#include "aideck_global_parameters.h"
+#include "global_queues.h"
 
 #define DEBUG_MODULE "APP_PARAMETERS_C"
 #include "debug.h"
@@ -40,14 +40,14 @@ float ya[SAMPLES_FOR_AVERAGE] = {0.0f};
 float za[SAMPLES_FOR_AVERAGE] = {0.0f};
 
 // Function Prototypes
-void getParameters(void);
-void calculateAverages(void);
-static int compareFloats(const void *a, const void *b);
+void read_parameters(void);
+void calculate_averages(void);
+static int compare_floats(const void *a, const void *b);
 float median(const float values[SAMPLES_FOR_AVERAGE]);
-void replaceOutliers(float values[SAMPLES_FOR_AVERAGE], float max_deviation);
+void replace_outliners(float values[SAMPLES_FOR_AVERAGE], float max_deviation);
 float average_samples(const float values[SAMPLES_FOR_AVERAGE]);
 
-void taskAppParameters(void *argument){
+void parameters_task(void *argument){
     idX = logGetVarId("stateEstimate", "x");
     idY = logGetVarId("stateEstimate", "y");
     idZ = logGetVarId("stateEstimate", "z");
@@ -63,11 +63,11 @@ void taskAppParameters(void *argument){
 
     while(1){
         vTaskDelay(M2T(SAMPLE_TIME));
-        getParameters();
+        read_parameters();
     }
 }
 
-void getParameters(void){
+void read_parameters(void){
     static int counter = 0;
     parameters.left_mr = logGetFloat(idLeft) / 1000.0f;
     parameters.right_mr = logGetFloat(idRight) / 1000.0f;
@@ -77,35 +77,35 @@ void getParameters(void){
     if(counter >= SAMPLES_FOR_AVERAGE){
         counter = 0;
         parameters.batteryP = logGetFloat(idBatteryP);
-        GoToFixPosition_t last_pos = {
+        GoToPosition_t last_pos = {
             .x = parameters.x,
             .y = parameters.y,
             .z = parameters.z
         };
-        calculateAverages();
-        GoToFixPosition_t current_pos = {
+        calculate_averages();
+        GoToPosition_t current_pos = {
             .x = parameters.x,
             .y = parameters.y,
             .z = parameters.z
         };
-        float distance_traveled = calculateDistance(last_pos, current_pos);
+        float distance_traveled = calculate_distance(last_pos, current_pos);
         parameters.speed = distance_traveled / (SAMPLES_FOR_AVERAGE * SAMPLE_TIME / 1000.0f);
     }
     xa[counter] = logGetFloat(idX);
     ya[counter] = logGetFloat(idY);
     za[counter] = logGetFloat(idZ);
     counter++;
-    BaseType_t result = parameters_set(&parameters);
+    BaseType_t result = set_parameters(&parameters);
     if (result != pdPASS) {
         DEBUG_PRINT("Failed to set parameters_set\n");
     }
 }
 
-void calculateAverages(void){
+void calculate_averages(void){
     float max_deviation = (MAX_SPEED * ((float)SAMPLE_TIME * (float)SAMPLES_FOR_AVERAGE) / 1000.0f) * 1.2f; // Maximum expected travel distance plus 20%
-    replaceOutliers(xa, max_deviation);
-    replaceOutliers(ya, max_deviation);
-    replaceOutliers(za, max_deviation);
+    replace_outliners(xa, max_deviation);
+    replace_outliners(ya, max_deviation);
+    replace_outliners(za, max_deviation);
     parameters.x = average_samples(xa);
     parameters.y = average_samples(ya);
     parameters.z = average_samples(za);
@@ -118,7 +118,7 @@ void calculateAverages(void){
 
 //------------------------------------- MATH FUNCTIONS ----------------------------------------//
 
-static int compareFloats(const void *a, const void *b){
+static int compare_floats(const void *a, const void *b){
     float x = *(const float *)a;
     float y = *(const float *)b;
 
@@ -133,7 +133,7 @@ float median(const float values[SAMPLES_FOR_AVERAGE]){
         sorted[i] = values[i];
     }
 
-    qsort(sorted, SAMPLES_FOR_AVERAGE, sizeof(float), compareFloats);
+    qsort(sorted, SAMPLES_FOR_AVERAGE, sizeof(float), compare_floats);
 
     if (SAMPLES_FOR_AVERAGE % 2 == 0) {
         // Even length: average the two middle values
@@ -145,7 +145,7 @@ float median(const float values[SAMPLES_FOR_AVERAGE]){
     }
 }
 
-void replaceOutliers(float values[SAMPLES_FOR_AVERAGE], float max_deviation){
+void replace_outliners(float values[SAMPLES_FOR_AVERAGE], float max_deviation){
     float med = median(values);
 
     float lower_bound = med - max_deviation;

@@ -16,7 +16,7 @@
 
 #define DEBUG_MODULE "APP_CONTROL_C"
 #include "debug.h"
-#include "aideck_global_parameters.h"
+#include "global_queues.h"
 
 #define WAYPOINT_DISTANCE 0.02f // in m
 #define AVOID_RADIUS 0.35f // in m
@@ -25,16 +25,14 @@
 Parameters_t current_parameters = {0};
 
 //Prototypes
-int travelTo(const GoToFixPosition_t current_pos, const GoToFixPosition_t new_pos);
-float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint);
+float go_to_position(const GoToPosition_t start_waypoint, const GoToPosition_t end_waypoint);
 bool avoid_collisions(float duration);
 void land(float absoluteHeight_m, float duration_s);
-float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2);
-GoToFixPosition_t *createLinearWaypoints(GoToFixPosition_t start, GoToFixPosition_t end, float spacing, size_t *outCount);
+float calculate_distance(GoToPosition_t point1, GoToPosition_t point2);
 static float clamp_float(float value, float min, float max);
 
-void taskAppControl(void *argument){
-    GoToFixPosition_t received_coordinates ={0};
+void control_task(void *argument){
+    GoToPosition_t received_coordinates ={0};
     float time_to_wait = 0;
     // Init high-level commander
     crtpCommanderHighLevelInit();
@@ -42,19 +40,19 @@ void taskAppControl(void *argument){
     while(1){
         vTaskDelay(M2T(10));
         //DEBUG_PRINT("taskAppControl: while: started\n");
-        if (goto_fix_position_get(&received_coordinates) == pdPASS) {
+        if (get_goto_position(&received_coordinates) == pdPASS) {
             //DEBUG_PRINT("taskAppControl: got fix position\n");
             bool goto_successful = false;
             while (!goto_successful){
-                if (parameters_get(&current_parameters) == pdPASS) {
-                    GoToFixPosition_t current_position = {
+                if (get_parameters(&current_parameters) == pdPASS) {
+                    GoToPosition_t current_position = {
                         .x = current_parameters.x,
                         .y = current_parameters.y,
                         .z = current_parameters.z
                     };
                     // DEBUG_PRINT("Current c: x=%f, y=%f, z=%f\n", (double)current_parameters.x, (double)current_parameters.y, (double)current_parameters.z);
                     DEBUG_PRINT("--- taskAppControl moving to: x=%f, y=%f, z=%f\n", (double)received_coordinates.x, (double)received_coordinates.y, (double)received_coordinates.z);
-                    time_to_wait = goToFixedCoordinates(current_position, received_coordinates);
+                    time_to_wait = go_to_position(current_position, received_coordinates);
                     goto_successful = avoid_collisions(time_to_wait);
                 }
             }
@@ -65,8 +63,8 @@ void taskAppControl(void *argument){
 /**
 * @return float time needed for movement in s
 */
-float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFixPosition_t end_waypoint){
-    float distance = calculateDistance(start_waypoint, end_waypoint);
+float go_to_position(const GoToPosition_t start_waypoint, const GoToPosition_t end_waypoint){
+    float distance = calculate_distance(start_waypoint, end_waypoint);
     // Calculate and check travel time
     float travel_time = distance / MAX_SPEED;
     // if (!isfinite((double)travel_time) || travel_time < 0.01f) {
@@ -78,10 +76,10 @@ float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFix
     if(!supervisorIsFlying()){
         // Arm
         supervisorRequestArming(true);
-        vTaskDelay(M2T(500));
-        // Takeoff
-        crtpCommanderHighLevelTakeoff(0.5, 2);
         vTaskDelay(M2T(2000));
+        // Takeoff
+        crtpCommanderHighLevelTakeoff(1.0, 2);
+        vTaskDelay(M2T(3000));
     }
     // Goto coordinates
     DEBUG_PRINT("Current c: x=%f, y=%f, z=%f\n", (double)start_waypoint.x, (double)start_waypoint.y, (double)start_waypoint.z);
@@ -97,13 +95,13 @@ float goToFixedCoordinates(const GoToFixPosition_t start_waypoint, const GoToFix
 bool avoid_collisions(float duration){
     bool successful = true;
     float radius = 0.0f;
-    GoToFixPosition_t pos_from_params = {0};
-    GoToFixPosition_t avoid_position = {0};
+    GoToPosition_t pos_from_params = {0};
+    GoToPosition_t avoid_position = {0};
     TickType_t startTime = xTaskGetTickCount();
     TickType_t durationTicks = pdMS_TO_TICKS((uint32_t)(duration * 1200.0f));
     while ((xTaskGetTickCount() - startTime) < durationTicks) {
         vTaskDelay(pdMS_TO_TICKS(15)); // Must stay at beginning of while loop (20 too slow, 10 good, 5 is aggressive, 15 is good)
-        if (parameters_get(&current_parameters) == pdPASS) {
+        if (get_parameters(&current_parameters) == pdPASS) {
             bool trigger_avoid = false;
             pos_from_params.x = current_parameters.x;
             pos_from_params.y = current_parameters.y;
@@ -131,7 +129,7 @@ bool avoid_collisions(float duration){
             }
             if(trigger_avoid) {
                 DEBUG_PRINT("Obstackle detected: front=%f, back=%f, left=%f, right=%f\n", (double)current_parameters.front_mr, (double)current_parameters.back_mr, (double)current_parameters.left_mr, (double)current_parameters.right_mr);
-                float time_to_wait = goToFixedCoordinates(pos_from_params, avoid_position);
+                float time_to_wait = go_to_position(pos_from_params, avoid_position);
                 successful = false;
                 startTime = xTaskGetTickCount();
                 durationTicks = pdMS_TO_TICKS((uint32_t)(time_to_wait * 1200.0f));
@@ -155,7 +153,7 @@ void land(float absoluteHeight_m, float duration_s){
  *
  * @return Distance between point1 and point2
  */
-float calculateDistance(GoToFixPosition_t point1, GoToFixPosition_t point2){
+float calculate_distance(GoToPosition_t point1, GoToPosition_t point2){
     float dx = point2.x - point1.x;
     float dy = point2.y - point1.y;
     float dz = point2.z - point1.z;
